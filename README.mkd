@@ -1,0 +1,34 @@
+Snapshot
+========
+
+The snapshot plugin adds two new rake tasks that make it easy for you to take
+a snapshot of your existing (development) database, and restore it again.
+
+Why would you want this?
+
+Imagine you are developing an app. You've spent a few hours filling your
+development DB with data so that you can design a particular UI scenario.
+Now, though, you need to design another scenario, which requires a different
+dataset, and you are loathe to lose the data you so laboriously entered.
+
+The snapshot plugin saves the day:
+
+    $ rake db:snapshot
+
+This creates a db/snapshot file (which records all the data in your DB),
+and a db/snapshot.schema file (which records the state of the schema when
+the snapshot was taken). At any time, then, you can restore that snapshot:
+
+    $ rake db:snapshot:restore
+
+This will erase the existing DB, restore the db/snapshot.schema schema,
+and then load the data. If there are any pending migrations, it will then
+run those, and then regenerate the snapshot so that it stays at the latest
+schema.
+
+You can pass a different snapshot file to use as a parameter, to either
+task:
+
+    $ rake db:snapshot[scenarios/real-estate]
+    ...
+    $ rake db:snapshot:restore[scenarios/telemarketer]
