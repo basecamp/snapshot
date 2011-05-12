@@ -32,3 +32,15 @@ task:
     $ rake db:snapshot[scenarios/real-estate]
     ...
     $ rake db:snapshot:restore[scenarios/telemarketer]
+
+
+Limitations
+-----------
+
+The current version will probably fail when there are foreign key constraints,
+since the order the tables and rows are restored is not guaranteed to be in
+any particular order.
+
+Also, even moderately large data sets (e.g. multiple thousands of rows) may
+result in poor performance during snapshot and restore, since the data is all
+loaded into memory.
