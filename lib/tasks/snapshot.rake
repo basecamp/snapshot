@@ -6,7 +6,7 @@ whatever parameter is given.
   rake db:snapshot
   rake db:snapshot[db/scenarios/fully-loaded]
 DESC
-  task :snapshot, :to, :needs => "db:schema:dump" do |t, args|
+  task :snapshot, [:to] => "db:schema:dump" do |t, args|
     to = args[:to] || "db/snapshot"
 
     cp "db/schema.rb", to + ".schema"
@@ -40,7 +40,7 @@ up to date. The snapshot is then retaken with the updated schema.
   rake db:snapshot:restore
   rake db:snapshot:restore[db/scenarios/fully-loaded]
 DESC
-    task :restore, :from, :needs => :environment do |t, args|
+    task :restore, [:from] => :environment do |t, args|
       abort "refusing to restore snapshot in production" if Rails.env.production?
 
       from = args[:from] || "db/snapshot"
