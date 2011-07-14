@@ -11,7 +11,10 @@ DESC
 
     cp "db/schema.rb", to + ".schema"
     conn = ActiveRecord::Base.connection
-    data = []
+
+    meta = {
+      :now => Time.now.utc,
+      :tables => (data = []) }
 
     conn.tables.each do |table|
       next if table == "schema_migrations"
@@ -27,7 +30,7 @@ DESC
     end
 
     STDERR.puts "writing snapshot to #{to}..."
-    File.open(to, "w") { |out| YAML.dump(data, out) }
+    File.open(to, "w") { |out| YAML.dump(meta, out) }
   end
 
   namespace :snapshot do
@@ -39,6 +42,11 @@ up to date. The snapshot is then retaken with the updated schema.
 
   rake db:snapshot:restore
   rake db:snapshot:restore[db/scenarios/fully-loaded]
+
+Times and dates will be computed relative to the current time, unless
+you specify the NOW variable instead.
+
+  rake db:snapshot:restore NOW='2011-01-01T12:00:00Z'
 DESC
     task :restore, [:from] => :environment do |t, args|
       abort "refusing to restore snapshot in production" if Rails.env.production?
@@ -66,9 +74,13 @@ DESC
 
       # load the data
       data = YAML.load_file(from)
-      data.each do |table|
+      relative_to = data[:now]
+
+      now = (ENV['NOW'] && Time.parse(ENV['NOW'])) || Time.now.utc
+      today = now.to_date
+
+      data[:tables].each do |table|
         table_name = table[:table]
-        next if table_name == "schema_migrations"
 
         STDERR.puts "- #{table_name} (#{table[:rows].length} rows)..."
 
@@ -78,8 +90,19 @@ DESC
         sfx = ")"
 
         table[:rows].each do |row|
-          sql = pfx + columns.map { |c| conn.quote(row[c.name], c) }.join(",") + sfx
-          conn.insert_sql(sql)
+          values = columns.map do |c|
+            value = case c.type
+              when :datetime then
+                now - (relative_to - Time.parse(row[c.name].to_s)) if row[c.name]
+              when :date
+                today - (relative_to.to_date - Date.parse(row[c.name].to_s)) if row[c.name]
+              else
+                row[c.name]
+              end
+            conn.quote(value, c)
+          end
+
+          conn.insert_sql(pfx + values.join(",") + sfx)
         end
       end
 
