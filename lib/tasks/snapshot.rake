@@ -1,3 +1,32 @@
+class SnapshotHelper
+  def initialize
+    @on_snapshot = []
+    @on_restore  = []
+  end
+
+  def on_snapshot(&block)
+    @on_snapshot.push block
+  end
+
+  def on_restore(&block)
+    @on_restore.push block
+  end
+
+  def snapshot!(path)
+    @on_snapshot.each do |callback|
+      callback.call(path)
+    end
+  end
+
+  def restore!(path)
+    @on_restore.each do |callback|
+      callback.call(path)
+    end
+  end
+end
+
+DBSnapshot = SnapshotHelper.new
+
 namespace :db do
   desc <<DESC
 Takes a snapshot of the current database (defaults to db/snapshot).
@@ -31,6 +60,8 @@ DESC
 
     STDERR.puts "writing snapshot to #{to}..."
     File.open(to, "w") { |out| YAML.dump(meta, out) }
+
+    DBSnapshot.snapshot!(to)
   end
 
   namespace :snapshot do
@@ -105,6 +136,8 @@ DESC
           conn.insert_sql(pfx + values.join(",") + sfx)
         end
       end
+
+      DBSnapshot.restore!(from)
 
       # make sure we're all up-to-date, schema-wise
       migrator = ActiveRecord::Migrator.new(:up, "db/migrate/")
