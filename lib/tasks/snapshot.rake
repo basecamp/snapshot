@@ -105,7 +105,7 @@ DESC
 
       # load the data
       data = YAML.load_file(from)
-      relative_to = data[:now]
+      relative_to = Time.parse(data[:now].to_s)
 
       now = (ENV['NOW'] && Time.parse(ENV['NOW'])) || Time.now.utc
       today = now.to_date
